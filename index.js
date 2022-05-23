@@ -20,6 +20,25 @@ async function run () {
         const toolCollection = client.db('tools-manufacturer').collection('tools');
         const userCollection = client.db('tools-manufacturer').collection('users');
         const orderCollection = client.db('tools-manufacturer').collection('orders');
+
+        app.get('/user', async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
+
+        app.put('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: user,
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+            // const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            // res.send({ result, token });
+            res.send(result);
+        });
     }
     finally {
 
