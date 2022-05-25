@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -19,6 +20,7 @@ async function run () {
         console.log("database connected");
         const toolCollection = client.db('tools-manufacturer').collection('tools');
         const userCollection = client.db('tools-manufacturer').collection('users');
+        const productCollection = client.db('tools-manufacturer').collection('products');
         const orderCollection = client.db('tools-manufacturer').collection('orders');
         const reviewCollection = client.db('tools-manufacturer').collection('reviews');
 
@@ -36,7 +38,8 @@ async function run () {
                 $set: user,
             };
             const result = await userCollection.updateOne(filter, updateDoc, options);
-            res.send(result);
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+            res.send({ result, token });
         });
 
         // Get requests 
@@ -55,12 +58,30 @@ async function run () {
             res.send(tool);
         });
 
+        app.get('/user', async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
+
         // post request
         app.post("/review", async (req, res) => {
             const review = req.body;
             const result = await reviewCollection.insertOne(review);
             console.log("Review added");
             res.send({ success: 'product added' });
+        });
+        app.post('/product', async (req, res) => {
+            const product = req.body;
+            // const query = { treatment: booking.treatment, date: booking.date, patient: booking.patient }
+            // const exists = await bookingCollection.findOne(query);
+            // if (exists) {
+            //   return res.send({ success: false, booking: exists })
+            // }
+            const result = await productCollection.insertOne(product);
+            // console.log('sending email');
+            // sendAppointmentEmail(booking);
+            // return res.send({ success: true, result });
+            res.send(result);
         });
 
         // Update requests
