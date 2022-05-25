@@ -52,11 +52,12 @@ async function run () {
             res.send(reviews);
         });
         app.get("/purchase/:id", async (req, res) => {
-            const toolId = req.params.id;
-            const query = { _id: ObjectId(toolId) };
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
             const tool = await toolCollection.findOne(query);
             res.send(tool);
         });
+
 
         app.get('/user', async (req, res) => {
             const users = await userCollection.find().toArray();
