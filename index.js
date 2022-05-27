@@ -4,6 +4,8 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -19,11 +21,13 @@ async function run () {
     try {
         await client.connect();
         console.log("database connected");
+        // console.log(process.env.STRIPE_SECRET_KEY);
         const toolCollection = client.db('tools-manufacturer').collection('tools');
         const userCollection = client.db('tools-manufacturer').collection('users');
         const productCollection = client.db('tools-manufacturer').collection('products');
         const orderCollection = client.db('tools-manufacturer').collection('orders');
         const reviewCollection = client.db('tools-manufacturer').collection('reviews');
+        const paymentCollection = client.db('tools-manufacturer').collection('payments');
 
         // app.get('/user', async (req, res) => {
         //     const users = await userCollection.find().toArray();
@@ -52,7 +56,20 @@ async function run () {
             const reviews = await reviewCollection.find().toArray();
             res.send(reviews);
         });
+        app.post("/review", async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            console.log("Review added");
+            res.send({ success: 'product added' });
+        });
+
         app.get("/purchase/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const tool = await toolCollection.findOne(query);
+            res.send(tool);
+        });
+        app.get("/payment/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const tool = await toolCollection.findOne(query);
@@ -110,14 +127,25 @@ async function run () {
         //     res.send({ result, token });
         //   });
 
+        app.patch('/order/:id', async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            };
+
+            const result = await paymentCollection.insertOne(payment);
+            const updatedOrder = await orderCollection.updateOne(filter, updatedDoc);
+            res.send(updatedOrder);
+        });
+
 
         // post request
-        app.post("/review", async (req, res) => {
-            const review = req.body;
-            const result = await reviewCollection.insertOne(review);
-            console.log("Review added");
-            res.send({ success: 'product added' });
-        });
+
 
 
         app.post('/order', async (req, res) => {
@@ -165,17 +193,17 @@ async function run () {
         //   })
 
         // Stripe API
-        // app.post('/create-payment-intent', async (req, res) => {
-        //     const tool = req.body;
-        //     const price = tool.price_per_unit;
-        //     const amount = price * 100;
-        //     const paymentIntent = await stripe.paymentIntents.create({
-        //         amount: amount,
-        //         currency: 'usd',
-        //         payment_method_types: ['card']
-        //     });
-        //     res.send({ clientSecret: paymentIntent.client_secret });
-        // });
+        app.post('/create-payment-intent', async (req, res) => {
+            const tool = req.body;
+            const price = tool.price_per_unit;
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({ clientSecret: paymentIntent.client_secret });
+        });
 
     }
     finally {
