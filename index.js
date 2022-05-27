@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -71,18 +72,19 @@ async function run () {
             console.log("Review added");
             res.send({ success: 'product added' });
         });
-        app.post('/product', async (req, res) => {
-            const product = req.body;
+
+
+        app.post('/order', async (req, res) => {
+            const order = req.body;
             // const query = { treatment: booking.treatment, date: booking.date, patient: booking.patient }
             // const exists = await bookingCollection.findOne(query);
             // if (exists) {
             //   return res.send({ success: false, booking: exists })
             // }
-            const result = await productCollection.insertOne(product);
+            const result = await orderCollection.insertOne(order);
             // console.log('sending email');
             // sendAppointmentEmail(booking);
-            // return res.send({ success: true, result });
-            res.send(result);
+            return res.send({ success: true, result });
         });
 
         // Update requests
@@ -101,6 +103,19 @@ async function run () {
         //     const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
         //     res.send(updatedBooking);
         //   })
+
+        // Stripe API
+        // app.post('/create-payment-intent', async (req, res) => {
+        //     const tool = req.body;
+        //     const price = tool.price_per_unit;
+        //     const amount = price * 100;
+        //     const paymentIntent = await stripe.paymentIntents.create({
+        //         amount: amount,
+        //         currency: 'usd',
+        //         payment_method_types: ['card']
+        //     });
+        //     res.send({ clientSecret: paymentIntent.client_secret });
+        // });
 
     }
     finally {
