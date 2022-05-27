@@ -65,6 +65,52 @@ async function run () {
             res.send(users);
         });
 
+        app.put('/user/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin });
+        });
+
+        // app.patch('/user/:email', async(req, res) =>{
+        //     const email  = req.params.email;
+        //     const updatedProfile = req.body;
+        //     const filter = {email: email};
+        //     const updatedDoc = {
+        //       $set: {
+        //         paid: true,
+        //         transactionId: payment.transactionId
+        //       }
+        //     }
+
+        //     const result = await paymentCollection.insertOne(payment);
+        //     const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
+        //     res.send(updatedBooking);
+        //   })
+
+        // app.put('/user/:email', async (req, res) => {
+        //     const email = req.params.email;
+        //     const user = req.body;
+        //     const filter = { email: email };
+        //     const options = { upsert: true };
+        //     const updateDoc = {
+        //       $set: user,
+        //     };
+        //     const result = await userCollection.updateOne(filter, updateDoc, options);
+        //     const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+        //     res.send({ result, token });
+        //   });
+
+
         // post request
         app.post("/review", async (req, res) => {
             const review = req.body;
@@ -85,6 +131,20 @@ async function run () {
             // console.log('sending email');
             // sendAppointmentEmail(booking);
             return res.send({ success: true, result });
+        });
+
+        app.get('/order', async (req, res) => {
+            const customerEmail = req.query.customerEmail;
+            // const decodedEmail = req.decoded.email;
+            // if (patient === decodedEmail) {
+            const query = { customerEmail: customerEmail };
+            const orders = await orderCollection.find(query).toArray();
+            // return res.send(orders);
+            res.send(orders);
+            // }
+            // else {
+            //   return res.status(403).send({ message: 'forbidden access' });
+            // }
         });
 
         // Update requests
