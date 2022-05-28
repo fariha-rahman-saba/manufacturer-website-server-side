@@ -130,15 +130,15 @@ async function run () {
         // REST API for order
         app.get('/order', async (req, res) => {
             const customerEmail = req.query.customerEmail;
-            const decodedEmail = req.decoded.email;
-            if (patient === decodedEmail) {
-                const query = { customerEmail: customerEmail };
-                const orders = await orderCollection.find(query).toArray();
-                return res.send(orders);
-            }
-            else {
-                return res.status(403).send({ message: 'forbidden access' });
-            }
+            // const decodedEmail = req.decoded.email;
+            // if (patient === decodedEmail) {
+            const query = { customerEmail: customerEmail };
+            const orders = await orderCollection.find(query).toArray();
+            return res.send(orders);
+            // }
+            // else {
+            // return res.status(403).send({ message: 'forbidden access' });
+            // }
         });
         app.patch('/order/:id', async (req, res) => {
             const id = req.params.id;
@@ -174,9 +174,7 @@ async function run () {
         app.get('/allOrder', async (req, res) => {
             const orders = await orderCollection.find().toArray();
             return res.send(orders);
-        }
-
-        );
+        });
 
 
 
