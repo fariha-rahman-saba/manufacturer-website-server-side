@@ -5,8 +5,6 @@ const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
-
-
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -46,6 +44,32 @@ async function run () {
         const reviewCollection = client.db('tools-manufacturer').collection('reviews');
         const paymentCollection = client.db('tools-manufacturer').collection('payments');
 
+        // api for getting all users
+        app.get('/user', async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
+
+        // api for making an user an admin
+        app.put('/user/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+        // api for checking if an user is an admin
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === 'admin';
+            res.send({ admin: isAdmin });
+        });
+
+        // api for updating user
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
@@ -59,14 +83,42 @@ async function run () {
             res.send({ result, token });
         });
 
+        // api for deleting an user
+        app.delete('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const result = await userCollection.deleteOne(filter);
+            res.send(result);
+        });
+
+        // api for getting all tools
         app.get('/tool', async (req, res) => {
             const tools = await toolCollection.find().toArray();
             res.send(tools);
         });
+
+        // api for adding a tool
+        app.post("/tool", async (req, res) => {
+            const tool = req.body;
+            const result = await toolCollection.insertOne(tool);
+            res.send({ success: 'Tool added' });
+        });
+
+        // api for deleting a tool
+        app.delete('/tool/:id', async (req, res) => {
+            const toolId = req.params.id;
+            const filter = { _id: ObjectId(toolId) };
+            const result = await toolCollection.deleteOne(filter);
+            res.send(result);
+        });
+
+        // api for getting all reviews
         app.get('/review', async (req, res) => {
             const reviews = await reviewCollection.find().toArray();
             res.send(reviews);
         });
+
+        // api for adding a review
         app.post("/review", async (req, res) => {
             const review = req.body;
             const result = await reviewCollection.insertOne(review);
@@ -74,48 +126,20 @@ async function run () {
             res.send({ success: 'Tool added' });
         });
 
-        app.post("/tool", async (req, res) => {
-            const tool = req.body;
-            const result = await toolCollection.insertOne(tool);
-            res.send({ success: 'Tool added' });
-        });
 
-        app.get("/purchase/:id", async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const tool = await toolCollection.findOne(query);
-            res.send(tool);
+        // REST API for order
+        app.get('/order', async (req, res) => {
+            const customerEmail = req.query.customerEmail;
+            // const decodedEmail = req.decoded.email;
+            // if (patient === decodedEmail) {
+            const query = { customerEmail: customerEmail };
+            const orders = await orderCollection.find(query).toArray();
+            return res.send(orders);
+            // }
+            // else {
+            //     return res.status(403).send({ message: 'forbidden access' });
+            // }
         });
-        app.get("/payment/:id", async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const tool = await toolCollection.findOne(query);
-            res.send(tool);
-        });
-
-
-        app.get('/user', async (req, res) => {
-            const users = await userCollection.find().toArray();
-            res.send(users);
-        });
-
-        app.put('/user/admin/:email', async (req, res) => {
-            const email = req.params.email;
-            const filter = { email: email };
-            const updateDoc = {
-                $set: { role: 'admin' },
-            };
-            const result = await userCollection.updateOne(filter, updateDoc);
-            res.send(result);
-        });
-        app.get('/admin/:email', async (req, res) => {
-            const email = req.params.email;
-            const user = await userCollection.findOne({ email: email });
-            const isAdmin = user.role === 'admin';
-            res.send({ admin: isAdmin });
-        });
-
-
         app.patch('/order/:id', async (req, res) => {
             const id = req.params.id;
             const payment = req.body;
@@ -138,41 +162,36 @@ async function run () {
             const result = await orderCollection.deleteOne(filter);
             res.send(result);
         });
-        app.delete('/user/:email', async (req, res) => {
-            const email = req.params.email;
-            const filter = { email: email };
-            const result = await userCollection.deleteOne(filter);
-            res.send(result);
-        });
-
 
         app.post('/order', async (req, res) => {
             const order = req.body;
-            // const query = { treatment: booking.treatment, date: booking.date, patient: booking.patient }
-            // const exists = await bookingCollection.findOne(query);
-            // if (exists) {
-            //   return res.send({ success: false, booking: exists })
-            // }
             const result = await orderCollection.insertOne(order);
-            // console.log('sending email');
-            // sendAppointmentEmail(booking);
             return res.send({ success: true, result });
         });
 
-        app.get('/order', async (req, res) => {
-            const customerEmail = req.query.customerEmail;
-            // const decodedEmail = req.decoded.email;
-            // if (patient === decodedEmail) {
-            const query = { customerEmail: customerEmail };
-            const orders = await orderCollection.find(query).toArray();
-            // return res.send(orders);
-            res.send(orders);
-            // }
-            // else {
-            //   return res.status(403).send({ message: 'forbidden access' });
-            // }
-        });
 
+
+        app.get('/allOrder', async (req, res) => {
+            const orders = await orderCollection.find().toArray();
+            return res.send(orders);
+        }
+
+        );
+
+
+
+        app.get("/purchase/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const tool = await toolCollection.findOne(query);
+            res.send(tool);
+        });
+        app.get("/payment/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const tool = await toolCollection.findOne(query);
+            res.send(tool);
+        });
 
 
         // Stripe API
