@@ -42,7 +42,6 @@ async function run () {
         // database collections
         const toolCollection = client.db('tools-manufacturer').collection('tools');
         const userCollection = client.db('tools-manufacturer').collection('users');
-        const productCollection = client.db('tools-manufacturer').collection('products');
         const orderCollection = client.db('tools-manufacturer').collection('orders');
         const reviewCollection = client.db('tools-manufacturer').collection('reviews');
         const paymentCollection = client.db('tools-manufacturer').collection('payments');
@@ -72,7 +71,13 @@ async function run () {
             const review = req.body;
             const result = await reviewCollection.insertOne(review);
             console.log("Review added");
-            res.send({ success: 'product added' });
+            res.send({ success: 'Tool added' });
+        });
+
+        app.post("/tool", async (req, res) => {
+            const tool = req.body;
+            const result = await toolCollection.insertOne(tool);
+            res.send({ success: 'Tool added' });
         });
 
         app.get("/purchase/:id", async (req, res) => {
