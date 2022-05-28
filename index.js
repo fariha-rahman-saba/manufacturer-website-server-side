@@ -51,7 +51,7 @@ async function run () {
         });
 
         // api for making an user an admin
-        app.put('/user/admin/:email', verifyJWT, async (req, res) => {
+        app.put('/user/admin/:email', async (req, res) => {
             const email = req.params.email;
             const filter = { email: email };
             const updateDoc = {
@@ -62,7 +62,7 @@ async function run () {
         });
 
         // api for checking if an user is an admin
-        app.get('/admin/:email', verifyJWT, async (req, res) => {
+        app.get('/admin/:email', async (req, res) => {
             const email = req.params.email;
             const user = await userCollection.findOne({ email: email });
             const isAdmin = user.role === 'admin';
@@ -70,7 +70,7 @@ async function run () {
         });
 
         // api for updating user
-        app.put('/user/:email', verifyJWT, async (req, res) => {
+        app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
             const filter = { email: email };
@@ -128,7 +128,7 @@ async function run () {
 
 
         // REST API for order
-        app.get('/order', verifyJWT, async (req, res) => {
+        app.get('/order', async (req, res) => {
             const customerEmail = req.query.customerEmail;
             const decodedEmail = req.decoded.email;
             if (patient === decodedEmail) {
@@ -140,7 +140,7 @@ async function run () {
                 return res.status(403).send({ message: 'forbidden access' });
             }
         });
-        app.patch('/order/:id', verifyJWT, async (req, res) => {
+        app.patch('/order/:id', async (req, res) => {
             const id = req.params.id;
             const payment = req.body;
             const filter = { _id: ObjectId(id) };
@@ -156,14 +156,14 @@ async function run () {
             res.send(updatedOrder);
         });
 
-        app.delete('/order/:id', verifyJWT, async (req, res) => {
+        app.delete('/order/:id', async (req, res) => {
             const orderId = req.params.id;
             const filter = { _id: ObjectId(orderId) };
             const result = await orderCollection.deleteOne(filter);
             res.send(result);
         });
 
-        app.post('/order', verifyJWT, async (req, res) => {
+        app.post('/order', async (req, res) => {
             const order = req.body;
             const result = await orderCollection.insertOne(order);
             return res.send({ success: true, result });
@@ -171,7 +171,7 @@ async function run () {
 
 
 
-        app.get('/allOrder', verifyJWT, async (req, res) => {
+        app.get('/allOrder', async (req, res) => {
             const orders = await orderCollection.find().toArray();
             return res.send(orders);
         }
