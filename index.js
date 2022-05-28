@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 
@@ -12,27 +13,39 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.yhyer.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+// Token varification
+function verifyJWT (req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'UnAuthorized access' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' });
+        }
+        req.decoded = decoded;
+        next();
+    });
+}
 
 
 async function run () {
     try {
         await client.connect();
         console.log("database connected");
-        // console.log(process.env.STRIPE_SECRET_KEY);
+
+        // database collections
         const toolCollection = client.db('tools-manufacturer').collection('tools');
         const userCollection = client.db('tools-manufacturer').collection('users');
         const productCollection = client.db('tools-manufacturer').collection('products');
         const orderCollection = client.db('tools-manufacturer').collection('orders');
         const reviewCollection = client.db('tools-manufacturer').collection('reviews');
         const paymentCollection = client.db('tools-manufacturer').collection('payments');
-
-        // app.get('/user', async (req, res) => {
-        //     const users = await userCollection.find().toArray();
-        //     res.send(users);
-        // });
 
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
@@ -47,7 +60,6 @@ async function run () {
             res.send({ result, token });
         });
 
-        // Get requests 
         app.get('/tool', async (req, res) => {
             const tools = await toolCollection.find().toArray();
             res.send(tools);
@@ -98,34 +110,6 @@ async function run () {
             res.send({ admin: isAdmin });
         });
 
-        // app.patch('/user/:email', async(req, res) =>{
-        //     const email  = req.params.email;
-        //     const updatedProfile = req.body;
-        //     const filter = {email: email};
-        //     const updatedDoc = {
-        //       $set: {
-        //         paid: true,
-        //         transactionId: payment.transactionId
-        //       }
-        //     }
-
-        //     const result = await paymentCollection.insertOne(payment);
-        //     const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
-        //     res.send(updatedBooking);
-        //   })
-
-        // app.put('/user/:email', async (req, res) => {
-        //     const email = req.params.email;
-        //     const user = req.body;
-        //     const filter = { email: email };
-        //     const options = { upsert: true };
-        //     const updateDoc = {
-        //       $set: user,
-        //     };
-        //     const result = await userCollection.updateOne(filter, updateDoc, options);
-        //     const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-        //     res.send({ result, token });
-        //   });
 
         app.patch('/order/:id', async (req, res) => {
             const id = req.params.id;
@@ -143,9 +127,18 @@ async function run () {
             res.send(updatedOrder);
         });
 
-
-        // post request
-
+        app.delete('/order/:id', async (req, res) => {
+            const orderId = req.params.id;
+            const filter = { _id: ObjectId(orderId) };
+            const result = await orderCollection.deleteOne(filter);
+            res.send(result);
+        });
+        app.delete('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const result = await userCollection.deleteOne(filter);
+            res.send(result);
+        });
 
 
         app.post('/order', async (req, res) => {
@@ -175,22 +168,7 @@ async function run () {
             // }
         });
 
-        // Update requests
-        // app.patch('/user/:email', async(req, res) =>{
-        //     const email  = req.params.email;
-        //     const updatedProfile = req.body;
-        //     const filter = {email: email};
-        //     const updatedDoc = {
-        //       $set: {
-        //         paid: true,
-        //         transactionId: payment.transactionId
-        //       }
-        //     }
 
-        //     const result = await paymentCollection.insertOne(payment);
-        //     const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
-        //     res.send(updatedBooking);
-        //   })
 
         // Stripe API
         app.post('/create-payment-intent', async (req, res) => {
@@ -202,6 +180,7 @@ async function run () {
                 currency: 'usd',
                 payment_method_types: ['card']
             });
+
             res.send({ clientSecret: paymentIntent.client_secret });
         });
 
